@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <buildpath>
 	<buildpathentry kind="src" path="stack"/>
+	<buildpathentry kind="src" path="apis"/>
+	<buildpathentry kind="src" path="installer"/>
 	<buildpathentry kind="con" path="org.eclipse.ldt.ExecutionEnvironmentContainer/lua/5.2"/>
 </buildpath>

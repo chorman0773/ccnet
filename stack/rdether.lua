@@ -1,22 +1,22 @@
-local SHA = require"SHA";
+local SHA = require"apis.SHA";
 
-local CRC32 = require"CRC32";
+local CRC32 = require"apis.CRC32";
 
-local int2bin = require"int2bin";
+local int2bin = require"apis.int2bin";
 
 local checkSumFn = CRC32.forPolynomial(0xC704DD7B);
 
-local computerMacAddress = string.char(0,249)..SHA.SHA1(os.getid()):sub(1,4);
+local computerMacAddress = string.char(0,249)..SHA.SHA256(os.getid()):sub(1,4);
 
 local preambleAndSMID = string.char(85,85,85,85,85,85,85,211);
 
-local broadcastMac = string,char(255,255,255,255,255,255);
+local broadcastMac = string.char(255,255,255,255,255,255);
 
 local interpacket = string.char(255,255,255,255,255,255,255,255,255,255,255,255);
 
 local modems;
 
-local channel =802;
+local channel =8023;
 
 local listeningAddressesSet = {[computerMacAddress]=true,[broadcastMac]=true}
 
@@ -56,7 +56,8 @@ function send(addr,payload)
     end
 end
 
-local function recievePackets()
+function recieveFrames()
+  while true do
     local _1, senderChannel, _3, message = os.pullEvent("modem_message");
     if senderChannel==channel and message:sub(1,8)==preambleAndSMID then
       --We have an ethernet message, handle it appropriately
@@ -67,13 +68,17 @@ local function recievePackets()
           local payload = message:sub(25,25+len);
           local check = message:sub(26+len,30+len);
           if checkSumFn(payload)~=check then
-              os.queueEvent("rdether_message",recieverMac,sourceMac,message);
+              return recieverMac,sourceMac,message;
           end
        end
     end
+  end
 end
 
-function waitForPackets()
-    async.doAsync(recievePackets);
-    return os.pullEvent("rdether_message");
+function listenOn(addr)
+  listeningAddressesSet[addr] = true;
+end
+
+function unlistenOn(addr)
+  listeningAddressSet[addr] = false;
 end
