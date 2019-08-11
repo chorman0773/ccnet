@@ -9,14 +9,14 @@ local function emitCCNETPaths(installpath)
 end
 
 local function copyStartupFiles(installpath)
-  local installStartupFiles = fs.combine(installpath,"startup/ccnet");
+  local installStartupFiles = fs.combine(installpath,"installer/startup/ccnet");
   for _,path in ipairs(fs.list(installStartupFiles)) do
     fs.copy(fs.combine(installStartupFiles,path),fs.combine("/startup","ccnet_"..path));
   end
 end
 
 local function afterInstallRunStartupFiles(installpath)
-  local installStartupFiles = fs.combine(installpath,"startup/ccnet");
+  local installStartupFiles = fs.combine(installpath,"installer/startup/ccnet");
   for _,path in ipairs(fs.list(installStartupFiles)) do
     shell.run(fs.combine(installStartupFiles,path));
   end
