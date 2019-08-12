@@ -8,6 +8,7 @@ local function emitCCNETPaths(installpath)
   file:write(binpathline);
 end
 
+
 local function copyStartupFiles(installpath)
   local installStartupFiles = fs.combine(installpath,"installer/startup/ccnet");
   for _,path in ipairs(fs.list(installStartupFiles)) do
