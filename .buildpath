@@ -2,6 +2,6 @@
 <buildpath>
 	<buildpathentry kind="src" path="stack"/>
 	<buildpathentry kind="src" path="apis"/>
-	<buildpathentry kind="src" path="installer"/>
+	<buildpathentry kind="src" path="install"/>
 	<buildpathentry kind="con" path="org.eclipse.ldt.ExecutionEnvironmentContainer/lua/5.2"/>
 </buildpath>
