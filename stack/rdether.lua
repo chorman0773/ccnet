@@ -6,7 +6,7 @@ local int2bin = require"apis.int2bin";
 
 local checkSumFn = CRC32.forPolynomial(0xC704DD7B);
 
-local computerMacAddress = string.char(0,249)..SHA.SHA256(os.getid()):sub(1,4);
+
 
 local preambleAndSMID = string.char(85,85,85,85,85,85,85,211);
 
@@ -14,32 +14,13 @@ local broadcastMac = string.char(255,255,255,255,255,255);
 
 local interpacket = string.char(255,255,255,255,255,255,255,255,255,255,255,255);
 
-local modems;
+local interfaces;
 
 local channel =8023;
 
-local listeningAddressesSet = {[computerMacAddress]=true,[broadcastMac]=true}
 
-local function init()
-    for _, side in ipairs(peripheral.getNames()) do
-        local type = peripheral.getType(side);
-        if type == "modem" or type=="wireless_modem" then
-           local modem = peripheral.wrap(side);
-           table.insert(modems,modem);
-           modem.open(channel);
-        end
-    end
-end
 
-local function sendTo(addr, payload)
-    local check = checkSumFn(payload);
-    local len = #payload
-    
-    local frame = preambleAndSMID..addr..computerMacAddress..(int2bin.hword(len))..payload..check..interpacket;
-    for _, modem in ipairs(modems) do
-      modem.transmit(channel,channel,frame);
-    end
-end
+
 
 local function breakPayload(payload)
     if #payload > 1500 then
@@ -49,36 +30,70 @@ local function breakPayload(payload)
     end
 end
 
-function send(addr,payload)
-    local payloads = {breakPayload(payload)};
-    for _,v in ipairs(payloads) do
-        sendTo(addr,payload)
+local function newInterface(side,name) 
+  local modem = peripheral.wrap(side);
+  modem.open(channel);
+  local ifaceMacAddress = string.char(0,249)..SHA.SHA256(os.getid()..side):sub(1,4);
+  local interface = {};
+  local listeningAddressesSet = {[ifaceMacAddress]=true,[broadcastMac]=true}
+  function interface:send(addr,payload)
+      local payloads = {breakPayload(payload)};
+      for _,v in ipairs(payloads) do
+          interface:sendTo(addr,payload)
+      end
+  end
+  
+  function interface:recieveFrames()
+    while true do
+      local _side, senderChannel, _3, message = os.pullEvent("modem_message");
+      if _side ==side and senderChannel==channel and message:sub(1,8)==preambleAndSMID then
+        --We have an ethernet message, handle it appropriately
+        local recieverMac = message:sub(9,15);
+        local sourceMac = message:sub(16,22);
+        if listeningAddressesSet[recieverMac] then
+            local len = int2bin.tohword(message:sub(23,24));
+            local payload = message:sub(25,25+len);
+            local check = message:sub(26+len,30+len);
+            if checkSumFn(payload)~=check then
+                return recieverMac,sourceMac,message;
+            end
+         end
+      end
     end
-end
-
-function recieveFrames()
-  while true do
-    local _1, senderChannel, _3, message = os.pullEvent("modem_message");
-    if senderChannel==channel and message:sub(1,8)==preambleAndSMID then
-      --We have an ethernet message, handle it appropriately
-      local recieverMac = message:sub(9,15);
-      local sourceMac = message:sub(16,22);
-      if listeningAddressesSet[recieverMac] then
-          local len = int2bin.tohword(message:sub(23,24));
-          local payload = message:sub(25,25+len);
-          local check = message:sub(26+len,30+len);
-          if checkSumFn(payload)~=check then
-              return recieverMac,sourceMac,message;
-          end
-       end
-    end
+  end
+  
+  function interface:listenOn(addr)
+    listeningAddressesSet[addr] = true;
+  end
+  
+  function interface:unlistenOn(addr)
+    listeningAddressesSet[addr] = false;
+  end
+  
+  function interface:getHardwareAddress()
+    return ifaceMacAddress;
+  end
+  
+  function interface:getArpHardwareProtocolNumber()
+    return 1
+  end
+  function interface:getName()
+    return name;
+  end
+  function interface:disconnect()
+    
   end
 end
 
-function listenOn(addr)
-  listeningAddressesSet[addr] = true;
-end
+local icount = 0;
 
-function unlistenOn(addr)
-  listeningAddressSet[addr] = false;
+function getInterface(side)
+  if interfaces[side] then
+    return interfaces[side];
+  else
+    local iface = newInterface(side,"eth"..icount);
+    icount = icount +1;
+    interfaces[side] = iface;
+    return iface;
+  end
 end

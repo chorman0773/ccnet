@@ -13,6 +13,7 @@ local gateway;
 local gatewayEncoded;
 local interfaceAddress;
 local netprefix;
+local protocolAddress;
 
 local prefixLen;
 local networkAddr;
@@ -20,4 +21,14 @@ local networkAddr;
 local gatewayMAC = string.char(255,255,255,255,255,255);
 local idGateway = true; --We need to ID what the gateway is.
 
+function verifyBinaryAddress(addr)
+   return #addr == 4;
+end
 
+function getProtocolAddress()
+  return networkAddr;
+end
+
+function getArpProtocolNumber()
+  return 0x800;
+end
